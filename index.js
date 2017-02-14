@@ -2,6 +2,7 @@
 
 var postcss = require('postcss')
 var valueParser = require('postcss-value-parser')
+var fs = require('fs');
 
 var THEME_FUNCTION_NAME = 'theme'
 
@@ -11,23 +12,26 @@ var THEME_FUNCTION_NAME = 'theme'
  * @param {function} themeFileResolver
  * @return {string} The transformed `value` param.
  */
-function transform (value, themeFileResolver) {
-  // Exit condition to improve performance
-  if (value.indexOf(THEME_FUNCTION_NAME) === -1) { return value }
-
-  return valueParser(value).walk(function (node) {
-    if (node.type === 'function' && node.value === THEME_FUNCTION_NAME) {
-      node.type = 'string'
-      node.quote = '"'
-      node.value = themeFileResolver(valueParser.stringify(node.nodes))
+function transform(value, themeFileResolver) {
+    // Exit condition to improve performance
+    if (value.indexOf(THEME_FUNCTION_NAME) === -1) {
+        return value
     }
-  }, true).toString()
+
+    return valueParser(value).walk(
+        function (node) {
+            if (node.type === 'function' && node.value === THEME_FUNCTION_NAME) {
+                node.type = 'string'
+                node.quote = '"'
+                node.value = themeFileResolver(valueParser.stringify(node.nodes))
+            }
+        }, true).toString()
 }
 
 // Like path.join(), but will always use '/' as separator, even on Windows.
 // See https://github.com/andywer/postcss-theme/issues/1
-function joinPaths (path1, path2) {
-  return path1 + (path1.match(/\/$/) ? '' : '/') + path2
+function joinPaths(path1, path2) {
+    return path1 + (path1.match(/\/$/) ? '' : '/') + path2
 }
 
 /**
@@ -38,16 +42,20 @@ function joinPaths (path1, path2) {
  * @param {object} options
  * @return {string} Transformed themeFilePath.
  */
-function defaultThemeFileResolver (themeFilePath, options) {
-  if (!options || !options.themePath) {
-    throw new Error('No theme path set.')
-  }
+function defaultThemeFileResolver(themeFilePath, options) {
+    if (!options || !options.themePath) {
+        throw new Error('No theme path set.')
+    }
 
-  if (!themeFilePath.match(/\.css$/i)) {
-    themeFilePath += '.css'
-  }
+    if (!themeFilePath.match(/\.css$/i)) {
+        themeFilePath += '.css'
+    }
 
-  return joinPaths(options.themePath, themeFilePath)
+    var cssPath = joinPaths(options.themePath, themeFilePath);
+    if (fs.existsSync(path)) {
+        return cssPath;
+    }
+    return joinPaths("./", themeFilePath)
 }
 
 /**
@@ -55,22 +63,24 @@ function defaultThemeFileResolver (themeFilePath, options) {
  *
  * @param {object} options { themePath: String, themeFileResolver: Function }
  */
-module.exports = postcss.plugin('postcss-theme', function (options) {
-  options = options || {}
+module.exports = postcss.plugin(
+    'postcss-theme', function (options) {
+        options = options || {}
 
-  return function (css) {
-    // proxy the resolver call, bind the 2nd and 3rd parameter
-    var themeFileResolver = function (themeFilePath) {
-      var resolver = options.themeFileResolver || defaultThemeFileResolver
-      return resolver(themeFilePath, options, defaultThemeFileResolver, css.source)
-    }
+        return function (css) {
+            // proxy the resolver call, bind the 2nd and 3rd parameter
+            var themeFileResolver = function (themeFilePath) {
+                var resolver = options.themeFileResolver || defaultThemeFileResolver
+                return resolver(themeFilePath, options, defaultThemeFileResolver, css.source)
+            }
 
-    css.walk(function (node) {
-      if (node.type === 'decl') {
-        node.value = transform(node.value, themeFileResolver)
-      } else if (node.type === 'atrule') {
-        node.params = transform(node.params, themeFileResolver)
-      }
+            css.walk(
+                function (node) {
+                    if (node.type === 'decl') {
+                        node.value = transform(node.value, themeFileResolver)
+                    } else if (node.type === 'atrule') {
+                        node.params = transform(node.params, themeFileResolver)
+                    }
+                })
+        }
     })
-  }
-})

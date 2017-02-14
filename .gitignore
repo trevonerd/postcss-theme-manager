@@ -1,1 +1,8 @@
 node_modules/
+.idea/encodings.xml
+.idea/jsLibraryMappings.xml
+.idea/misc.xml
+.idea/modules.xml
+.idea/postcss-theme-manager.iml
+.idea/vcs.xml
+.idea/workspace.xml
