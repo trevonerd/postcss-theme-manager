@@ -52,7 +52,7 @@ function defaultThemeFileResolver(themeFilePath, options) {
     }
 
     var cssPath = joinPaths(options.themePath, themeFilePath);
-    if (fs.existsSync(path)) {
+    if (fs.existsSync(cssPath)) {
         return cssPath;
     }
     return joinPaths("./", themeFilePath)
